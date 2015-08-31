@@ -1,0 +1,61 @@
+Ultrapedia-API Plugin for MediaWiki
+===================================
+Author: Christian Becker <chris@beckr.org>
+
+This plugin extends the MediaWiki editing process to allow highlighting, as well as an update notification to a DBpedia endpoint.
+It thereby implements functionalities 4.10.2.1 Wikipedia, Article Edit Form and 4.10.2.2, DBpedia Article Extraction as specified in the Ultrapedia Prototype I Design Phase Report.
+
+Requirements
+============
+MediaWiki: This plugin was developed and tested against MediaWiki 1.15.1.
+Browsers: Developed and tested against Internet Explorer 6, 7, 8; Firefox 3 (Mac/Windows), Safari 4 (Mac)
+
+When using Firefox 2, the highlighted portion does not scroll with the text content. This is due to a known browser bug, see https://bugzilla.mozilla.org/show_bug.cgi?id=35011#c105.
+
+Installation
+============
+The plug-in must be extracted into the extensions/ folder of a MediaWiki installation.
+It is then included by adding the following lines at the bottom of MediaWiki's LocalSettings.php:
+
+	define("ULTRAPEDIA_DBPEDIA_ENDPOINT", "http://wiking.vulcan.com/dbpedia/extractPage.php");
+	require_once("$IP/extensions/Ultrapedia-API/Ultrapedia-API.php");
+
+ULTRAPEDIA_DBPEDIA_ENDPOINT hereby specifies the URL of the DBpedia endpoint that is to receive the update notification.
+
+Patches
+=======
+The functionality of the Ultrapedia-API plugin is enhanced through two minor patches to MediaWiki 1.15.1.
+It is highly recommended to apply these patches for correct operation within the Ultrapedia Prototype I, although
+the patches are technically not a dependency as they only concern error handling.
+
+Article.php.1.15.1.patch: 
+
+	This patch adds support for a new hook, RevisionSave, which is invoked after a revision has been saved,
+	and can revert the revision by returning false.
+	This allows the Ultrapedia-API plugin to obtain a revision ID for any updates while still being able to revert them
+	in case they are rejected by the upstream systems.
+	If the patch is not applied, the Ultrapedia-API plugin will fall back to using the ArticleSave hook, which
+	does not possess revision information as it is invoked before the revision is created.
+
+EditPage.php.1.15.1.patch: 
+
+	MediaWiki 1.15.1 silently fails if a newly created article cannot be saved, contrarily to its handling when an article is updated.
+	Because the Ultrapedia-API plugin actively prevents the saving of an article if the update can not be forwarded to DBpedia
+	in order to maintain concurrency, this may confuse users and lead to lost edits.
+	
+	The patch provided in EditPage.php.1.15.1.patch fixes the issue by adding a new status code AS_ARTICLE_INSERT_FAILED to EditPage.php,
+	along with appropriate handling. It is, however, not a manditory dependency of this plugin.
+	
+	To apply the patch using GNU patch, enter the following command from within the Ultrapedia-API extension directory:
+	
+	This patches EditPage.php and backs up the original file as EditPage.php.orig.
+	
+Applying the patches:
+
+	To apply the patches using GNU patch, enter the following command from within the Ultrapedia-API extension directory:
+	
+		patch -b ../../includes/Article.php < patches/Article.php.1.15.1.patch
+		patch -b ../../includes/EditPage.php < patches/EditPage.php.1.15.1.patch
+	
+	This patches Article.php and EditPage.php, backing up the original files as Article.php.orig and EditPage.php.orig.
+	

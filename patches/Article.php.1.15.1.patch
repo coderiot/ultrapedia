@@ -1,0 +1,81 @@
+--- Article.php.orig	2009-11-26 20:49:58.000000000 +0100
++++ Article.php	2009-11-26 21:19:49.000000000 +0100
+@@ -3,6 +3,18 @@
+  * File for articles
+  * @file
+  */
++ 
++/*************************************************************************
++ *
++ * Patched for Ultrapedia-API Plugin using Article.php.1.15.1.patch
++ *
++ * This patch adds support for a new hook, RevisionSave, which is invoked
++ * after a revision has been saved, and can revert the revision by returning false.
++ *
++ * Define function: function fnMyHook( &$article, &$user, &$text, &$summary,
++ *                    $minor, $watch, $sectionanchor, &$flags, $revisionId ) { ... }
++ *
++ *************************************************************************/
+ 
+ /**
+  * Class representing a MediaWiki article and history.
+@@ -42,6 +54,8 @@
+ 	var $mUserText = '';              //!<
+ 	/**@}}*/
+ 
++	const hasRevisionSavePatch = true;
++
+ 	/**
+ 	 * Constructor and clear the article
+ 	 * @param $title Reference to a Title object.
+@@ -1638,7 +1652,24 @@
+ 
+ 				$dbw->begin();
+ 				$revisionId = $revision->insertOn( $dbw );
+-
++				
++				if( !wfRunHooks( 'RevisionSave', array( &$this, &$user, &$text, &$summary,
++					$flags & EDIT_MINOR, null, null, &$flags, &$status, $revisionId ) ) )
++				{
++					# Delete the invalid revision if the DB is not transactional
++					if( !$wgDBtransactions ) {
++						$dbw->delete( 'revision', array( 'rev_id' => $revisionId ), __METHOD__ );
++					}
++					$revisionId = 0;
++					$dbw->rollback();
++					wfDebug( __METHOD__ . ": RevisionSave hook aborted save!\n" );
++					wfProfileOut( __METHOD__ );
++					if( $status->isOK() ) {
++						$status->fatal( 'edit-hook-aborted');
++					}
++					return $status;
++				}
++				
+ 				# Update page
+ 				#
+ 				# Note that we use $this->mLatest instead of fetching a value from the master DB 
+@@ -1734,6 +1765,24 @@
+ 				'user_text'  => $user->getName(),
+ 				) );
+ 			$revisionId = $revision->insertOn( $dbw );
++			
++			if( !wfRunHooks( 'RevisionSave', array( &$this, &$user, &$text, &$summary,
++				$flags & EDIT_MINOR, null, null, &$flags, &$status, $revisionId ) ) )
++			{
++				# Delete the invalid revision if the DB is not transactional
++				if( !$wgDBtransactions ) {
++					$dbw->delete( 'page', array( 'page_id' => $newid ), __METHOD__ );
++					$dbw->delete( 'revision', array( 'rev_id' => $revisionId ), __METHOD__ );
++				}
++				$revisionId = 0;
++				$dbw->rollback();
++				wfDebug( __METHOD__ . ": RevisionSave hook aborted save!\n" );
++				wfProfileOut( __METHOD__ );
++				if( $status->isOK() ) {
++					$status->fatal( 'edit-hook-aborted');
++				}
++				return $status;
++			}
+ 
+ 			$this->mTitle->resetArticleID( $newid );
+ 

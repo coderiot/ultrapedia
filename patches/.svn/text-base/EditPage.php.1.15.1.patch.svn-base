@@ -1,0 +1,35 @@
+--- EditPage.php.orig	2009-11-25 22:24:38.000000000 +0100
++++ EditPage.php	2009-11-25 22:28:10.000000000 +0100
+@@ -41,6 +41,7 @@
+ 	const AS_SPAM_ERROR			= 232;
+ 	const AS_IMAGE_REDIRECT_ANON		= 233;
+ 	const AS_IMAGE_REDIRECT_LOGGED		= 234;
++	const AS_ARTICLE_INSERT_FAILED		= 235;
+ 
+ 	var $mArticle;
+ 	var $mTitle;
+@@ -882,11 +883,14 @@
+ 
+ 			$isComment = ( $this->section == 'new' );
+ 
+-			$this->mArticle->insertNewArticle( $this->textbox1, $this->summary,
++			$success = $this->mArticle->insertNewArticle( $this->textbox1, $this->summary,
+ 				$this->minoredit, $this->watchthis, false, $isComment, $bot );
++			
++			if (!$success)
++				$wgOut->mRedirect = '';
+ 
+ 			wfProfileOut( $fname );
+-			return self::AS_SUCCESS_NEW_ARTICLE;
++			return ($success ? self::AS_SUCCESS_NEW_ARTICLE : self::AS_ARTICLE_INSERT_FAILED);
+ 		}
+ 
+ 		# Article exists. Check for edit conflict.
+@@ -2496,6 +2500,7 @@
+ 			case self::AS_TEXTBOX_EMPTY:
+ 			case self::AS_MAX_ARTICLE_SIZE_EXCEEDED:
+ 			case self::AS_END:
++			case self::AS_ARTICLE_INSERT_FAILED:
+ 				return true;
+ 
+ 			case self::AS_HOOK_ERROR:

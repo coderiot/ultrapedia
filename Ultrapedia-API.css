@@ -1,0 +1,24 @@
+#ultrapedia-anchor {
+	position: relative; /* non-static so that it can be the anchor for #highlight */
+	overflow: hidden; /* hide highlighter when scrolled up */
+	padding-right: 6px; /* prevent cut-off of right scrollbar */
+}
+
+#wpTextbox1, #scrollPre {
+	background-repeat: repeat-x;
+	background-attachment: scroll;
+	padding-top: 1px;
+	font-family: monospace;	font-size: 13px;	line-height: 16px;	white-space: pre;
+	border: 1px solid #aaa;
+	position: relative; /* so that z-index has an effect */
+	z-index: 100;
+	background: transparent;
+}
+
+#ultrapedia-highlight {
+	background-color: #fff839;
+	position: absolute; /* in relation to #editform */
+	top: 1px;
+	left: 0;
+	z-index: 0;
+}
